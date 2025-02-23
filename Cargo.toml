@@ -1,0 +1,7 @@
+[package]
+name = "calzados-mrprice"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+inventory = { path = "./inventory"}
