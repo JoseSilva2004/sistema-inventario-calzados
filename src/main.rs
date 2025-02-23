@@ -6,6 +6,7 @@ fn main() {
     let mut inventory = Inventory::new();
     
     loop {
+        println!("\nSistema de inventario (Calzados) MrPrice Costa Azul");
         println!("\nOpciones:");
         println!("1. Añadir Calzado");
         println!("2. Eliminar Calzado");
