@@ -66,11 +66,11 @@ impl Inventory {
         F: Fn(), // F es un closure que no toma argumentos y no devuelve nada
     {
         clear_screen(); // Limpiar la pantalla usando el callback
-        println!("\n{:<5} {:<15} {:<15} {:<15} {:<10} {:<10}", "ID", "Código", "Marca", "Modelo", "Precio", "Cantidad");
-        println!("{}", "-".repeat(70));
+        println!("\n{:<5} {:<15} {:<15} {:<15} {:<10} {:<18}", "ID", "Código", "Marca", "Modelo", "Precio", "Cantidad en Inventario");
+        println!("{}", "-".repeat(90));
         
         for item in &self.items {
-            println!("{:<5} {:<15} {:<15} {:<15} {:<10.2} {:<10}", item.id, item.codigo_inventario, item.name, item.model, item.price, item.quantity);
+            println!("{:<5} {:<15} {:<15} {:<15} {:<10.2} {:<18}", item.id, item.codigo_inventario, item.name, item.model, item.price, item.quantity);
         }
         
         wait_for_keypress();
