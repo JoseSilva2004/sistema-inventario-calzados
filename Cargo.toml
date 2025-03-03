@@ -5,3 +5,4 @@ edition = "2024"
 
 [dependencies]
 inventory = { path = "./inventory"}
+iced = "0.4"
