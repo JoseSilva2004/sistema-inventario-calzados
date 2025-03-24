@@ -72,7 +72,7 @@ fn main() {
                     marca: marca.trim().to_string(),
                     modelo: modelo.trim().to_string(),
                     precio,
-                    color: color.trim().to_string(), // Nuevo campo: color
+                    color: color.trim().to_string(), 
                 };
 
                 match db.add_shoe(&shoe) {
@@ -202,7 +202,7 @@ fn main() {
                             
                             println!(
                                 "{}",
-                                "-".repeat(70).bright_black().green() // Línea separadora con estilo
+                                "-".repeat(70).bright_black().green() 
                             );
 
                             // Calcular el rango de calzados a mostrar
@@ -230,7 +230,7 @@ fn main() {
                                 } else {
                                     println!("  No hay tallas registradas para este calzado.");
                                 }
-                                println!("{}", "-".repeat(70).bright_black().green()); // Línea separadora entre calzados
+                                println!("{}", "-".repeat(70).bright_black().green()); 
                             }
 
                             // Menú de paginación

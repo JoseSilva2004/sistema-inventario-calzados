@@ -63,7 +63,7 @@ impl Database {
                 &shoe.marca.to_uppercase(),
                 &shoe.modelo.to_uppercase(),
                 &shoe.precio,
-                &shoe.color.to_uppercase(), // Nuevo campo: color
+                &shoe.color.to_uppercase(), 
             ),
         )?;
 
