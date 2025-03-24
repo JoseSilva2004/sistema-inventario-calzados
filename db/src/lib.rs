@@ -11,10 +11,18 @@ pub struct Shoe {
     pub marca: String,
     pub modelo: String,
     pub precio: f32,
+    pub color: String, 
+}
+
+#[derive(Debug, FromRow)]
+pub struct Talla {
+    pub id: u32,
+    pub calzado_id: u32,
+    pub talla: String,
     pub cantidad: u32,
 }
 
-//Funcion para limpiar la pantalla
+// Función para limpiar la pantalla
 pub fn clear_screen() {
     if cfg!(target_os = "windows") {
         Command::new("cmd")
@@ -28,7 +36,7 @@ pub fn clear_screen() {
     }
 }
 
-//Funcion para esperar a que el usuario presione una tecla
+// Función para esperar a que el usuario presione una tecla
 pub fn wait_for_keypress() {
     println!("\nPresione Enter para continuar...");
     let mut input = String::new();
@@ -45,111 +53,221 @@ impl Database {
         Ok(Database { pool })
     }
 
-    pub fn add_shoe(&self, shoe: &Shoe) -> Result<(), Box<dyn Error>> {
+    // Registrar un calzado
+    pub fn add_shoe(&self, shoe: &Shoe) -> Result<u32, Box<dyn Error>> {
         let mut conn = self.pool.get_conn()?;
         conn.exec_drop(
-            "INSERT INTO calzados (codigo_inventario, marca, modelo, precio, cantidad) VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO calzados (codigo_inventario, marca, modelo, precio, color) VALUES (?, ?, ?, ?, ?)",
             (
-                &shoe.codigo_inventario,
-                &shoe.marca,
-                &shoe.modelo,
+                &shoe.codigo_inventario.to_uppercase(),
+                &shoe.marca.to_uppercase(),
+                &shoe.modelo.to_uppercase(),
                 &shoe.precio,
-                &shoe.cantidad,
+                &shoe.color.to_uppercase(), // Nuevo campo: color
             ),
+        )?;
+
+        // Obtener el ID del calzado recién insertado
+        let calzado_id: u32 = conn.exec_first(
+            "SELECT id FROM calzados WHERE codigo_inventario = ?",
+            (&shoe.codigo_inventario.to_uppercase(),),
+        )?.ok_or("No se pudo obtener el ID del calzado")?;
+
+        Ok(calzado_id)
+    }
+
+    // Registrar una talla asociada a un calzado
+    pub fn add_talla(&self, calzado_id: u32, talla: &str, cantidad: u32) -> Result<(), Box<dyn Error>> {
+        let mut conn = self.pool.get_conn()?;
+        conn.exec_drop(
+            "INSERT INTO tallas (calzado_id, talla, cantidad) VALUES (?, ?, ?)",
+            (calzado_id, talla.to_uppercase(), cantidad),
         )?;
         Ok(())
     }
 
+    // Eliminar un calzado y sus tallas
     pub fn remove_shoe(&self, codigo_inventario: &str) -> Result<(), Box<dyn Error>> {
         let mut conn = self.pool.get_conn()?;
-    
+
         // Verificar si el calzado existe
         let exists: Option<u32> = conn.exec_first(
             "SELECT id FROM calzados WHERE codigo_inventario = ?",
             (codigo_inventario.to_uppercase(),),
         )?;
-    
+
         if exists.is_none() {
-            return Err(format!("\nEl calzado con código {} no fue encontrado.", codigo_inventario).into());
+            return Err(format!("\nEl calzado con código {} no fue encontrado.", codigo_inventario.to_uppercase()).into());
         }
-    
-        // Eliminar el calzado
+
+        // Eliminar el calzado (las tallas se eliminan automáticamente debido a ON DELETE CASCADE)
         conn.exec_drop(
             "DELETE FROM calzados WHERE codigo_inventario = ?",
             (codigo_inventario.to_uppercase(),),
         )?;
-    
-        println!("El calzado con código {} fue eliminado correctamente.", codigo_inventario);
-        
+
+        println!("El calzado con código {} fue eliminado correctamente.", codigo_inventario.to_uppercase());
         Ok(())
-        
     }
 
-    pub fn remove_inventory(&self, codigo_inventario: &str, cantidad: u32) -> Result<(), Box<dyn Error>> {
+    // Eliminar inventario de una talla específica
+    pub fn remove_inventory(&self, codigo_inventario: &str, talla: &str, cantidad: u32) -> Result<(), Box<dyn Error>> {
         let mut conn = self.pool.get_conn()?;
-    
+
         // Verificar si el calzado existe
-        let exists: Option<u32> = conn.exec_first(
+        let calzado_id: Option<u32> = conn.exec_first(
             "SELECT id FROM calzados WHERE codigo_inventario = ?",
             (codigo_inventario.to_uppercase(),),
         )?;
-    
-        if exists.is_none() {
 
+        if calzado_id.is_none() {
             return Err(format!("El calzado con código {} no fue encontrado.", codigo_inventario.to_uppercase()).into());
-
         }
-    
+
         // Verificar si hay suficiente cantidad en el inventario
         let current_quantity: Option<u32> = conn.exec_first(
-            "SELECT cantidad FROM calzados WHERE codigo_inventario = ?",
-            (codigo_inventario.to_uppercase(),),
+            "SELECT cantidad FROM tallas WHERE calzado_id = ? AND talla = ?",
+            (calzado_id, talla),
         )?;
-    
-        if let Some(current_quantity) = current_quantity {
 
+        if let Some(current_quantity) = current_quantity {
             if current_quantity < cantidad {
                 return Err(format!(
-                    "No hay suficientes pares del calzado con código {}. Cantidad actual: {}",
-                    codigo_inventario.to_uppercase(), current_quantity
+                    "No hay suficientes pares del calzado con código {} y talla {}. Cantidad actual: {}",
+                    codigo_inventario.to_uppercase(), talla, current_quantity
                 ).into());
             }
+        } else {
+            return Err(format!(
+                "No se encontró la talla {} para el calzado con código {}.",
+                talla, codigo_inventario.to_uppercase()
+            ).into());
         }
-    
+
         // Actualizar el inventario
         conn.exec_drop(
-            "UPDATE calzados SET cantidad = cantidad - ? WHERE codigo_inventario = ?",
-            (cantidad, codigo_inventario.to_uppercase()),
+            "UPDATE tallas SET cantidad = cantidad - ? WHERE calzado_id = ? AND talla = ?",
+            (cantidad, calzado_id, talla),
         )?;
-    
-        println!("Se han eliminado {} pares del calzado con código {}.", cantidad, codigo_inventario.to_uppercase());
 
+        println!("Se han eliminado {} pares del calzado con código {} y talla {}.", cantidad, codigo_inventario, talla);
         Ok(())
     }
 
-    pub fn list_shoes(&self) -> Result<Vec<Shoe>, Box<dyn Error>> {
+    // Listar todos los calzados con sus tallas
+    pub fn list_shoes(&self) -> Result<Vec<(Shoe, Vec<Talla>)>, Box<dyn Error>> {
         let mut conn = self.pool.get_conn()?;
 
-        let shoes = conn.query_map(
-            "SELECT id, codigo_inventario, marca, modelo, precio, cantidad FROM calzados",
-            |(id, codigo_inventario, marca, modelo, precio, cantidad)| Shoe {
+        // Obtener todos los calzados
+        let shoes: Vec<Shoe> = conn.query_map(
+            "SELECT id, codigo_inventario, marca, modelo, precio, color FROM calzados", // Incluir el campo color
+            |(id, codigo_inventario, marca, modelo, precio, color)| Shoe {
                 id,
                 codigo_inventario,
                 marca,
                 modelo,
                 precio,
-                cantidad,
+                color, // Nuevo campo: color
             },
         )?;
 
-        Ok(shoes)
+        // Obtener las tallas para cada calzado
+        let mut result = Vec::new();
+        for shoe in shoes {
+            let tallas: Vec<Talla> = conn.exec_map(
+                "SELECT id, calzado_id, talla, cantidad FROM tallas WHERE calzado_id = ?",
+                (shoe.id,),
+                |(id, calzado_id, talla, cantidad)| Talla {
+                    id,
+                    calzado_id,
+                    talla,
+                    cantidad,
+                },
+            )?;
+            result.push((shoe, tallas));
+        }
+
+        Ok(result)
     }
 
-    pub fn find_shoe_by_code(&self, codigo_inventario: &str) -> Result<Option<Shoe>, Box<dyn Error>> {
+    // Buscar un calzado por código de referencia
+    pub fn find_shoe_by_code(&self, codigo_inventario: &str) -> Result<Option<(Shoe, Vec<Talla>)>, Box<dyn Error>> {
         let mut conn = self.pool.get_conn()?;
-        let query = "SELECT id, codigo_inventario, marca, modelo, precio, cantidad FROM calzados WHERE codigo_inventario = ?";
-        let shoe: Option<Shoe> = conn.exec_first(query, (codigo_inventario,))?;
 
-        Ok(shoe)
+        // Obtener el calzado
+        let shoe: Option<Shoe> = conn.exec_first(
+            "SELECT id, codigo_inventario, marca, modelo, precio, color FROM calzados WHERE codigo_inventario = ?", // Incluir el campo color
+            (codigo_inventario.to_uppercase(),),
+        )?;
+
+        if let Some(shoe) = shoe {
+            // Obtener las tallas del calzado
+            let tallas: Vec<Talla> = conn.exec_map(
+                "SELECT id, calzado_id, talla, cantidad FROM tallas WHERE calzado_id = ?",
+                (shoe.id,),
+                |(id, calzado_id, talla, cantidad)| Talla {
+                    id,
+                    calzado_id,
+                    talla,
+                    cantidad,
+                },
+            )?;
+            Ok(Some((shoe, tallas)))
+        } else {
+            Ok(None)
+        }
+    }
+
+     // Actualizar los datos de un calzado
+    pub fn update_shoe(&self, id: u32, marca: &str, modelo: &str, color: &str, precio: f32) -> Result<(), Box<dyn Error>> {
+        let mut conn = self.pool.get_conn()?;
+        conn.exec_drop(
+            "UPDATE calzados SET marca = ?, modelo = ?, color = ?, precio = ? WHERE id = ?",
+            (marca.to_uppercase(), modelo.to_uppercase(), color.to_uppercase(), precio, id),
+        )?;
+        Ok(())
+    }
+
+    // Actualizar una talla específica de un calzado
+    pub fn update_talla(&self, calzado_id: u32, talla: &str, nueva_cantidad: u32) -> Result<(), Box<dyn Error>> {
+        let mut conn = self.pool.get_conn()?;
+        conn.exec_drop(
+            "UPDATE tallas SET cantidad = ? WHERE calzado_id = ? AND talla = ?",
+            (nueva_cantidad, calzado_id, talla.to_uppercase()),
+        )?;
+        Ok(())
+    }
+
+    // Eliminar una talla específica de un calzado
+    pub fn delete_talla(&self, calzado_id: u32, talla: &str) -> Result<(), Box<dyn Error>> {
+        let mut conn = self.pool.get_conn()?;
+
+        // Verificar si la talla existe
+        let exists: Option<u32> = conn.exec_first(
+            "SELECT id FROM tallas WHERE calzado_id = ? AND talla = ?",
+            (calzado_id, talla.to_uppercase()),
+        )?;
+
+        if exists.is_none() {
+            return Err(format!("La talla {} no está registrada para este calzado.", talla).into());
+        }
+
+        // Eliminar la talla
+        conn.exec_drop(
+            "DELETE FROM tallas WHERE calzado_id = ? AND talla = ?",
+            (calzado_id, talla.to_uppercase()),
+        )?;
+
+        Ok(())
+    }
+
+    // Agregar una nueva talla a un calzado
+    pub fn agregar_tallas(&self, calzado_id: u32, talla: &str, cantidad: u32) -> Result<(), Box<dyn Error>> {
+        let mut conn = self.pool.get_conn()?;
+        conn.exec_drop(
+            "INSERT INTO tallas (calzado_id, talla, cantidad) VALUES (?, ?, ?)",
+            (calzado_id, talla.to_uppercase(), cantidad),
+        )?;
+        Ok(())
     }
 }
