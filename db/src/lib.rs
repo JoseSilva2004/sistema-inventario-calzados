@@ -167,7 +167,7 @@ impl Database {
                 marca,
                 modelo,
                 precio,
-                color, // Nuevo campo: color
+                color, 
             },
         )?;
 

@@ -1,16 +1,19 @@
+//Sistema de inventario de calzado
+
 use db::{Database, Shoe, clear_screen, wait_for_keypress};
 use std::io;
 use colored::*;
 
 fn main() {
+    // Conexión a la base de datos
     let db = Database::new("mysql://root:30230054jose@localhost:3306/calzados_mrprice")
         .expect("Error al conectar con la base de datos");
 
     loop {
+        //Menu principal del sistema
         clear_screen();
         println!("\n{}", "╔════════════════════════════════════════════════════════════════╗".bright_blue());
         println!("{}", "║                  SISTEMA DE INVENTARIO (CALZADOS)               ║".bright_red());
-        println!("{}", "║                         MrPrice Costa Azul                      ║".bright_red());
         println!("{}", "║                                                                 ║".bright_blue());
       println!("\n{}", "║         **Desarrollado por José Silva (Estudiante UDONE)**      ║".bright_yellow().bold());
         println!("{}", "╠════════════════════════════════════════════════════════════════╣".bright_blue());
@@ -29,6 +32,7 @@ fn main() {
         let mut choice = String::new();
         io::stdin().read_line(&mut choice).expect("Error al leer la entrada");
 
+        //Añadir calzado
         match choice.trim() {
             "1" => {
                 clear_screen();
@@ -86,6 +90,7 @@ fn main() {
 
                 wait_for_keypress();
             }
+            //Registrar tallas 
             "2" => {
                 clear_screen();
 
@@ -108,7 +113,7 @@ fn main() {
                                 break;
                             }
 
-                            println!("Ingrese la cantidad para la talla {}:", talla.trim());
+                            println!("\nIngrese la cantidad para la talla {}:", talla.trim());
                             io::stdin().read_line(&mut cantidad).expect("Error al leer la entrada");
 
                             let cantidad: u32 = cantidad.trim().parse().expect("Por favor, ingrese un número válido");
@@ -116,7 +121,7 @@ fn main() {
                             if let Err(err) = db.add_talla(shoe.id, talla.trim(), cantidad) {
                                 println!("Error al registrar la talla: {}", err);
                             } else {
-                                println!("Talla {} registrada correctamente.", talla.trim());
+                                println!("{}", format!("\n¡Talla {} registrada correctamente!.", talla.trim().bright_blue()).bright_green());
                             }
 
                             wait_for_keypress();
@@ -132,6 +137,7 @@ fn main() {
                     }
                 }
             }
+            //Eliminar calzado
             "3" => {
                 clear_screen();
                 let mut codigo_inventario = String::new();
@@ -144,6 +150,7 @@ fn main() {
 
                 wait_for_keypress();
             }
+            //Eliminar inventario por talla
             "4" => {
                 clear_screen();
                 let mut codigo_inventario = String::new();
@@ -173,6 +180,7 @@ fn main() {
 
                 wait_for_keypress();
             }
+            //Listar calzados
             "5" => {
                 clear_screen();
                 match db.list_shoes() {
@@ -217,7 +225,7 @@ fn main() {
                                     shoe.codigo_inventario.cyan().bold(),
                                     shoe.marca.yellow().bold(),
                                     shoe.modelo.magenta().bold(),
-                                    format!("{:.2}", shoe.precio).red(), // Formatear el precio antes de aplicarle el color
+                                    format!("{:.2}$", shoe.precio).red(), // Formatear el precio antes de aplicarle el color
                                     shoe.color.blue().bold()
                                 );
 
@@ -228,19 +236,19 @@ fn main() {
                                         println!(" - Talla: {}, Cantidad: {}", talla.talla.bold().bright_green(), talla.cantidad.to_string().bold().bright_blue());
                                     }
                                 } else {
-                                    println!("  No hay tallas registradas para este calzado.");
+                                    println!("{}", "  ¡No hay tallas registradas para este calzado.!".bright_red());
                                 }
                                 println!("{}", "-".repeat(70).bright_black().green()); 
                             }
 
                             // Menú de paginación
-                            println!("\nOpciones:");
-                            println!("1 - Siguiente página");
-                            println!("2 - Página anterior");
-                            println!("3 - Volver al menú principal");
+                            println!("{}", "\nOpciones:".bright_blue());
+                            println!("{}", "1 - Siguiente página".bright_green());
+                            println!("{}", "2 - Página anterior".bright_green());
+                            println!("{}", "3 - Volver al menú principal".bright_green());
 
                             let mut opcion_paginacion = String::new();
-                            println!("\nSeleccione una opción:");
+                            println!("{}", "\nSeleccione una opción:".bright_blue());
                             io::stdin().read_line(&mut opcion_paginacion).expect("Error al leer la entrada");
 
                             match opcion_paginacion.trim() {
@@ -261,13 +269,18 @@ fn main() {
                                     }
                                 }
                                 "3" => break,
-                                _ => println!("Opción no válida, por favor intente de nuevo."),
+                                //Si se presiona un número no válido
+                                _ => {
+                                    println!("{}", "¡Opción no válida, por favor intente de nuevo.!".bright_red());
+                                    wait_for_keypress();
+                                }
                             }
                         }
                     }
                     Err(err) => println!("Error al listar los calzados: {}", err),
                 }
             }
+            //Buscar calzado por código
             "6" => {
                 clear_screen();
                 let mut codigo_inventario = String::new();
@@ -279,26 +292,36 @@ fn main() {
                         // Encabezado de la tabla
                         println!(
                             "\n{:<5} {:<15} {:<15} {:<15} {:<10} {:<10}",
-                            "ID", "Código", "Marca", "Modelo", "Precio", "Color"
+                            "ID".bold().green(),
+                            "Código".bold().cyan(),
+                            "Marca".bold().yellow(),
+                            "Modelo".bold().magenta(),
+                            "Precio".bold().red(),
+                            "Color".bold().blue()
                         );
-                        println!("{}", "-".repeat(70));
+                        println!("{}", "-".repeat(70).bright_black().green());
 
                         // Mostrar el calzado en una fila de la tabla
                         println!(
-                            "{:<5} {:<15} {:<15} {:<15} {:<10.2} {:<10}",
-                            shoe.id, shoe.codigo_inventario, shoe.marca, shoe.modelo, shoe.precio, shoe.color
+                            "{:<5} {:<15} {:<15} {:<15} {:<10} {:<10}",
+                            shoe.id.to_string().green().bold(),
+                            shoe.codigo_inventario.cyan().bold(),
+                            shoe.marca.yellow().bold(),
+                            shoe.modelo.magenta().bold(),
+                            format!("{:.2}$", shoe.precio).red(), // Formatear el precio antes de aplicarle el color
+                            shoe.color.blue().bold()
                         );
 
                         println!("\n  Tallas:");
                         // Mostrar las tallas asociadas al calzado
                         if !tallas.is_empty() {
                             for talla in tallas {
-                                println!("    - Talla: {}, Cantidad: {}", talla.talla, talla.cantidad);
+                                println!(" - Talla: {}, Cantidad: {}", talla.talla.bold().bright_green(), talla.cantidad.to_string().bold().bright_blue());
                             }
                         } else {
-                            println!("  No hay tallas registradas para este calzado.");
+                            println!("{}", "!No hay tallas registradas para este calzado.¡".bright_red());
                         }
-                        println!("{}", "-".repeat(70)); // Línea separadora
+                        println!("{}", "-".repeat(70).green()); // Línea separadora
                     }
                     Ok(None) => {
                         println!("\nEl calzado con código {} no fue encontrado.", codigo_inventario.trim().to_uppercase());
@@ -309,6 +332,7 @@ fn main() {
                 }
                 wait_for_keypress();
             }
+            //Modificar calzado
             "7" => {
                 clear_screen();
                 let mut codigo_inventario = String::new();
@@ -464,6 +488,7 @@ fn main() {
                 }
                 wait_for_keypress();
             }
+            //Salir del programa
             "8" => break,
             _ => println!("Opción no válida, por favor intente de nuevo."),
         }
