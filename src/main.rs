@@ -6,7 +6,7 @@ use colored::*;
 
 fn main() {
     // Conexión a la base de datos
-    let db = Database::new("mysql://root:30230054jose@localhost:3306/calzados_mrprice")
+    let db = Database::new("mysql://root:30230054jose@localhost:3306/calzados_db")
         .expect("Error al conectar con la base de datos");
 
     loop {
