@@ -1,4 +1,4 @@
-//Sistema de inventario de calzado
+//Sistema de inventario de calzados
 
 use db::{Database, Shoe, clear_screen, wait_for_keypress};
 use std::io;
@@ -128,7 +128,7 @@ fn main() {
                         }
                     }
                     Ok(None) => {
-                        println!("\nEl calzado con código {} no fue encontrado. Por favor, registre el calzado primero.", codigo_inventario.trim());
+                        println!("\nEl calzado con código {} no fue encontrado. Por favor, registre el calzado primero.", codigo_inventario.trim().to_uppercase());
                         wait_for_keypress();
                     }
                     Err(err) => {
@@ -160,25 +160,31 @@ fn main() {
                 println!("Ingrese el código de referencia del calzado:");
                 io::stdin().read_line(&mut codigo_inventario).expect("Error al leer la entrada");
 
-                clear_screen();
+                //Verificar si el calzado existe
+                if db.find_shoe_by_code(codigo_inventario.trim()).expect("Error al buscar el calzado").is_none() {
+                    println!("{}", format!("\n¡El calzado con código {} no fue encontrado.!", codigo_inventario.trim().to_uppercase().bright_cyan()).bright_red());
+                    wait_for_keypress();
+                
+                } else {
+                    println!("Ingrese la talla:");
+                    io::stdin().read_line(&mut talla).expect("Error al leer la entrada");
 
-                println!("Ingrese la talla:");
-                io::stdin().read_line(&mut talla).expect("Error al leer la entrada");
+                    clear_screen();
 
-                clear_screen();
+                    println!("Ingrese la cantidad a eliminar:");
+                    io::stdin().read_line(&mut cantidad).expect("Error al leer la entrada");
 
-                println!("Ingrese la cantidad a eliminar:");
-                io::stdin().read_line(&mut cantidad).expect("Error al leer la entrada");
+                    clear_screen();
 
-                clear_screen();
+                    let cantidad: u32 = cantidad.trim().parse().expect("Por favor, ingrese un número válido");
 
-                let cantidad: u32 = cantidad.trim().parse().expect("Por favor, ingrese un número válido");
+                    if let Err(err) = db.remove_inventory(codigo_inventario.trim(), talla.trim(), cantidad) {
+                        println!("{}", err);
+                    }
 
-                if let Err(err) = db.remove_inventory(codigo_inventario.trim(), talla.trim(), cantidad) {
-                    println!("{}", err);
+                    wait_for_keypress();
                 }
 
-                wait_for_keypress();
             }
             //Listar calzados
             "5" => {
@@ -324,8 +330,8 @@ fn main() {
                         println!("{}", "-".repeat(70).green()); // Línea separadora
                     }
                     Ok(None) => {
-                        println!("\nEl calzado con código {} no fue encontrado.", codigo_inventario.trim().to_uppercase());
-                    }
+                        println!("{}", format!("\n¡El calzado con código {} no fue encontrado.!", codigo_inventario.trim().to_uppercase().bright_cyan()).bright_red());
+                    }   
                     Err(err) => {
                         println!("Error al buscar el calzado: {}", err);
                     }
@@ -480,7 +486,7 @@ fn main() {
                         }
                     }
                     Ok(None) => {
-                        println!("\nEl calzado con código {} no fue encontrado.", codigo_inventario.trim());
+                        println!("{}", format!("\n¡El calzado con código {} no fue encontrado.!", codigo_inventario.trim().to_uppercase().bright_cyan()).bright_red());
                     }
                     Err(err) => {
                         println!("Error al buscar el calzado: {}", err);

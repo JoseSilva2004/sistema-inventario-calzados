@@ -3,6 +3,7 @@ use mysql::prelude::*;
 use std::error::Error;
 use std::process::Command;
 use std::io;
+use colored::*;
 
 #[derive(Debug, FromRow)]
 pub struct Shoe {
@@ -97,7 +98,7 @@ impl Database {
         )?;
 
         if exists.is_none() {
-            return Err(format!("\nEl calzado con código {} no fue encontrado.", codigo_inventario.to_uppercase()).into());
+            return Err(format!("\n¡El calzado con código {} no fue encontrado.!", codigo_inventario.to_uppercase().bright_cyan()).bright_red().into());
         }
 
         // Eliminar el calzado (las tallas se eliminan automáticamente debido a ON DELETE CASCADE)
@@ -106,7 +107,7 @@ impl Database {
             (codigo_inventario.to_uppercase(),),
         )?;
 
-        println!("El calzado con código {} fue eliminado correctamente.", codigo_inventario.to_uppercase());
+        println!("\nEl calzado con código {} fue eliminado correctamente.", codigo_inventario.to_uppercase());
         Ok(())
     }
 
@@ -196,7 +197,7 @@ impl Database {
 
         // Obtener el calzado
         let shoe: Option<Shoe> = conn.exec_first(
-            "SELECT id, codigo_inventario, marca, modelo, precio, color FROM calzados WHERE codigo_inventario = ?", // Incluir el campo color
+            "SELECT id, codigo_inventario, marca, modelo, precio, color FROM calzados WHERE codigo_inventario = ?",
             (codigo_inventario.to_uppercase(),),
         )?;
 
